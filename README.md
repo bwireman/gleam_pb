@@ -5,7 +5,7 @@ WIP protobuf support for Gleam ✨
 ## Progress
 
 - [X] Gleam Type generation
-  - [ ] custom functions that better handle default values
+  - [X] custom functions that better handle default values
   - [ ] stop including unnecessary imports
   - [ ] `gleam format` generated files
 - [ ] message encoding
@@ -71,5 +71,13 @@ pub type Example {
 
 pub type Response {
   Response(val: Int, user: String)
+}
+
+pub fn new_example() {
+  Example(list.new(), ExampleResponseOrErrorresponse(option.None))
+}
+
+pub fn new_response() {
+  Response(0, "")
 }
 ```
