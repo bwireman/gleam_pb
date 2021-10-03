@@ -1,6 +1,6 @@
 # `gleam_pb`
 
-A WIP protobuf support for Gleam ✨, that I'm writing for fun
+WIP protobuf support for Gleam ✨
 
 ## Progress
 
