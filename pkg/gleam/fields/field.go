@@ -8,29 +8,42 @@ import (
 )
 
 type Field struct {
-	name      pgs.Name
-	type_name string
-	repeated  bool
-	optional  bool
+	name            pgs.Name
+	gleam_primitive *GleamPrimitiveOrValue
+	type_name       string
+	repeated        bool
+	optional        bool
 }
 
 func FieldFromField(f pgs.Field) *Field {
-	typeName, repeated, optional := convert(f)
+	gleam_primitive, type_name, repeated, optional := convert(f)
 
 	return &Field{
-		name:      f.Name(),
-		type_name: typeName,
-		repeated:  repeated,
-		optional:  optional,
+		name:            f.Name(),
+		type_name:       type_name,
+		gleam_primitive: gleam_primitive,
+		repeated:        repeated,
+		optional:        optional,
 	}
 }
 
 func FieldFromOneOf(msg pgs.Message, o pgs.OneOf) *Field {
+	type_name := msg.Name().UpperCamelCase().String() + o.Name().UpperCamelCase().String()
+
+	zero_val_field := o.Fields()[0]
+
+	zero_val_primitive, _, _, _ := convert(zero_val_field)
+
+	zero_val_primitive.Value = fmt.Sprintf("%s%s(%s)", type_name, zero_val_field.Name().LowerSnakeCase().String(), GleamPrimitiveDefaultValues[zero_val_primitive.Primitive])
+
+	zero_val_primitive.Primitive = Unknown
+
 	return &Field{
-		name:      o.Name(),
-		type_name: (msg.Name() + o.Name()).UpperCamelCase().String(),
-		repeated:  false,
-		optional:  false,
+		name:            o.Name(),
+		type_name:       type_name,
+		gleam_primitive: zero_val_primitive,
+		repeated:        false,
+		optional:        false,
 	}
 }
 
@@ -46,43 +59,6 @@ func (f *Field) Render() string {
 	return fmt.Sprintf("%s: %s", f.name.LowerSnakeCase(), typeName)
 }
 
-var primitives = map[pgs.ProtoType]string{
-	pgs.DoubleT:  "Float",
-	pgs.FloatT:   "Float",
-	pgs.Int64T:   "Int",
-	pgs.UInt64T:  "Int",
-	pgs.Int32T:   "Int",
-	pgs.Fixed64T: "Int",
-	pgs.Fixed32T: "Int",
-	pgs.UInt32T:  "Int",
-	pgs.SFixed32: "Int",
-	pgs.SFixed64: "Int",
-	pgs.SInt64:   "Int",
-	pgs.SInt32:   "Int",
-	pgs.StringT:  "String",
-	pgs.BoolT:    "Bool",
-	pgs.BytesT:   "BitString",
-}
-
-var wktToTypeName = map[pgs.WellKnownType]string{
-	pgs.BoolValueWKT:   fmt.Sprintf("option.Option(%s)", primitives[pgs.BoolT]),
-	pgs.StringValueWKT: fmt.Sprintf("option.Option(%s)", primitives[pgs.StringT]),
-	pgs.DoubleValueWKT: fmt.Sprintf("option.Option(%s)", primitives[pgs.DoubleT]),
-	pgs.FloatValueWKT:  fmt.Sprintf("option.Option(%s)", primitives[pgs.FloatT]),
-	pgs.BytesValueWKT:  fmt.Sprintf("option.Option(%s)", primitives[pgs.BytesT]),
-	pgs.Int32ValueWKT:  fmt.Sprintf("option.Option(%s)", primitives[pgs.Int32T]),
-	pgs.Int64ValueWKT:  fmt.Sprintf("option.Option(%s)", primitives[pgs.Int64T]),
-	pgs.UInt32ValueWKT: fmt.Sprintf("option.Option(%s)", primitives[pgs.UInt32T]),
-	pgs.UInt64ValueWKT: fmt.Sprintf("option.Option(%s)", primitives[pgs.UInt64T]),
-	pgs.AnyWKT:         "gleam_pb.Any",
-	pgs.DurationWKT:    "gleam_pb.Duration",
-	pgs.EmptyWKT:       "gleam_pb.Empty",
-	pgs.StructWKT:      "gleam_pb.Struct",
-	pgs.TimestampWKT:   "gleam_pb.Timestamp",
-	pgs.ValueWKT:       "gleam_pb.Value",
-	pgs.ListValueWKT:   "list.List",
-}
-
 func _convert(f pgs.Field) (bool, string) {
 	var embed pgs.Message
 	if f.Type().IsMap() || f.Type().IsRepeated() {
@@ -92,7 +68,7 @@ func _convert(f pgs.Field) (bool, string) {
 	}
 
 	if embed.IsWellKnown() {
-		return false, wktToTypeName[embed.WellKnownType()]
+		return false, WKTToTypeName[embed.WellKnownType()]
 	}
 
 	type_package := embed.Package()
@@ -107,40 +83,53 @@ func _convert(f pgs.Field) (bool, string) {
 	return true, pName
 }
 
-func convert(f pgs.Field) (string, bool, bool) {
-	pType := f.Type().ProtoType()
+func convert(f pgs.Field) (*GleamPrimitiveOrValue, string, bool, bool) {
+	p_type := f.Type().ProtoType()
 	repeated := f.Type().IsRepeated()
 	optional := false
-	pName := ""
+	p_name := ""
+	gleam_primitive_or_value := &GleamPrimitiveOrValue{
+		Primitive: Unknown,
+		Value:     "",
+	}
 
-	switch pType {
+	switch p_type {
 	case pgs.EnumT:
 		var enum pgs.Enum
 
-		if f.Type().IsRepeated() {
+		if repeated {
 			enum = f.Type().Element().Enum()
 		} else {
 			enum = f.Type().Enum()
 		}
 
-		pName = enum.Name().UpperCamelCase().String()
+		gleam_primitive_or_value.Value = (enum.Name() + enum.Values()[0].Name()).UpperCamelCase().String()
+		p_name = enum.Name().UpperCamelCase().String()
+
 	case pgs.GroupT, pgs.MessageT:
 		if f.Type().IsMap() {
 			elem_type := ""
 			if f.Type().Element().IsEmbed() {
 				_, elem_type = _convert(f)
 			} else {
-				elem_type = primitives[f.Type().Element().ProtoType()]
+				elem_type = ProtoTypeToPrimitives[f.Type().Element().ProtoType()].Render()
 			}
 
-			pName = fmt.Sprintf("map.Map(%s, %s)", primitives[f.Type().Key().ProtoType()], elem_type)
+			p_name = fmt.Sprintf("map.Map(%s, %s)", ProtoTypeToPrimitives[f.Type().Key().ProtoType()].Render(), elem_type)
+			gleam_primitive_or_value.Primitive = Map
 		} else {
-			optional, pName = _convert(f)
+			optional, p_name = _convert(f)
 		}
 	default:
-		pName = primitives[pType]
+		gleam_primitive_or_value.Primitive = ProtoTypeToPrimitives[p_type]
+		p_name = gleam_primitive_or_value.Primitive.Render()
 	}
 
-	return pName, repeated, optional
+	if repeated {
+		gleam_primitive_or_value.Primitive = List
+	} else if optional {
+		gleam_primitive_or_value.Primitive = Option
+	}
 
+	return gleam_primitive_or_value, p_name, repeated, optional
 }

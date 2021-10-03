@@ -49,23 +49,35 @@ func (g *GleamModule) Execute(_targets map[string]pgs.File, pkgs map[string]pgs.
 }
 
 func (g *GleamModule) generate(all_messages []pgs.Message, all_enums []pgs.Enum, pkg pgs.Package, imports []string) {
-	gleam_types := []map[string]interface{}{}
+
+	gleam_types_map := []map[string]interface{}{}
+	generators := []map[string]interface{}{}
+
 	for _, enum := range all_enums {
-		gleam_types = append(gleam_types, fields.GleamTypeFromEnum(enum).RenderAsMap())
+		// don't need enum generators
+		gleam_types_map = append(gleam_types_map, fields.GleamTypeFromEnum(enum).RenderAsMap())
 	}
 
 	for _, msg := range all_messages {
 		for _, oo := range msg.OneOfs() {
-			gleam_types = append(gleam_types, fields.GleamTypeFromOnoeOf(msg, oo).RenderAsMap())
+			// don't need oneof generators
+			gleam_types_map = append(gleam_types_map, fields.GleamTypeFromOnoeOf(msg, oo).RenderAsMap())
 		}
 
-		gleam_types = append(gleam_types, fields.GleamTypeFromMessage(msg).RenderAsMap())
+		msg_gleam_type := fields.GleamTypeFromMessage(msg)
+
+		if generator := fields.GeneratorFnFromGleamType(msg_gleam_type); generator != nil {
+			generators = append(generators, generator.RenderAsMap())
+		}
+
+		gleam_types_map = append(gleam_types_map, msg_gleam_type.RenderAsMap())
 	}
 
 	g.AddGeneratorTemplateFile(strings.Replace(pkg.ProtoName().String(), ".", "/", -1)+".gleam", g.tpl, map[string]interface{}{
-		"imports":  imports,
-		"messages": gleam_types,
-		"package":  pkg.ProtoName().LowerSnakeCase().String(),
+		"imports":    imports,
+		"package":    pkg.ProtoName().LowerSnakeCase().String(),
+		"messages":   gleam_types_map,
+		"generators": generators,
 	})
 }
 
@@ -82,6 +94,12 @@ pub type {{ .type_name }} {
   {{ range .constructors -}}
     {{ . }}
   {{ end }}
+}
+{{ end }}
+
+{{ range .generators }}
+pub fn {{ .func_name }}() {
+	{{ .type_name }}({{ .fields }})
 }
 {{ end }}
 `

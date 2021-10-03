@@ -75,7 +75,7 @@ func GleamTypeFromOnoeOf(containing_message pgs.Message, oneof pgs.OneOf) *Gleam
 	}
 
 	return &GleamType{
-		type_name:    containing_message.Name() + oneof.Name(),
+		type_name:    containing_message.Name().UpperCamelCase() + oneof.Name().UpperCamelCase(),
 		constructors: cons,
 	}
 }

@@ -30,9 +30,9 @@ message Test {
     }
 
     oneof oneof_b {
-        int32 ib = 7;
-        float fb = 8;
-        protos.child.Child cb = 9;
+        protos.child.Child cb = 7;
+        int32 ib = 8;
+        float fb = 9;
     }
 
 
