@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package protos;
+
+import "protos/child.proto";
+
+message Test {
+
+    enum TestEnum {
+        foo = 0;
+        bar = 1;
+        baz = 2;
+    }
+
+
+    message Test2 {
+        int32 a = 1;
+        repeated int32 b = 2;
+    }
+
+    int32 a = 1;
+    Test2 t = 2;
+    TestEnum e = 3;
+    protos.child.Child b = 4;
+
+
+    oneof oneof_a {
+        int32 i = 5;
+        float f = 6;
+    }
+
+    oneof oneof_b {
+        int32 ib = 7;
+        float fb = 8;
+        protos.child.Child cb = 9;
+    }
+
+
+    map<int32, int32> map = 10;
+    map<int32, Test2> mapb = 11;
+
+
+    float this_is_a_long_name = 12;
+}

@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package protos;
+
+import "protos/test.proto";
+
+message Root {
+    repeated protos.Test t = 1;
+}
