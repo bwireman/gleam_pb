@@ -65,7 +65,7 @@ pub type ExampleResponseOrError {
 pub type Example {
   Example(
     options: list.List(OptionType),
-    response_or_error: ExampleResponseOrError,
+    response_or_error: option.Option(ExampleResponseOrError),
   )
 }
 
@@ -74,7 +74,7 @@ pub type Response {
 }
 
 pub fn new_example() {
-  Example(list.new(), ExampleResponseOrErrorresponse(option.None))
+  Example(list.new(), option.None)
 }
 
 pub fn new_response() {

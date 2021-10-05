@@ -1,5 +1,12 @@
 package fields
 
+func (p GleamPrimitive) AsPrimitiveOrValue() *GleamPrimitiveOrValue {
+	return &GleamPrimitiveOrValue{
+		Primitive: p,
+		Value:    "",
+	}
+}
+
 func (p GleamPrimitive) Render() string {
 	switch p {
 	case Int:

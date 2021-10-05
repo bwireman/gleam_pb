@@ -30,20 +30,12 @@ func FieldFromField(f pgs.Field) *Field {
 func FieldFromOneOf(msg pgs.Message, o pgs.OneOf) *Field {
 	type_name := msg.Name().UpperCamelCase().String() + o.Name().UpperCamelCase().String()
 
-	zero_val_field := o.Fields()[0]
-
-	zero_val_primitive, _, _, _ := convert(zero_val_field)
-
-	zero_val_primitive.Value = fmt.Sprintf("%s%s(%s)", type_name, zero_val_field.Name().LowerSnakeCase().String(), GleamPrimitiveDefaultValues[zero_val_primitive.Primitive])
-
-	zero_val_primitive.Primitive = Unknown
-
 	return &Field{
 		name:            o.Name(),
+		gleam_primitive: Option.AsPrimitiveOrValue(),
 		type_name:       type_name,
-		gleam_primitive: zero_val_primitive,
 		repeated:        false,
-		optional:        false,
+		optional:        true,
 	}
 }
 
@@ -88,10 +80,7 @@ func convert(f pgs.Field) (*GleamPrimitiveOrValue, string, bool, bool) {
 	repeated := f.Type().IsRepeated()
 	optional := false
 	p_name := ""
-	gleam_primitive_or_value := &GleamPrimitiveOrValue{
-		Primitive: Unknown,
-		Value:     "",
-	}
+	gleam_primitive_or_value := Unknown.AsPrimitiveOrValue()
 
 	switch p_type {
 	case pgs.EnumT:
