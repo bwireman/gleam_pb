@@ -6,10 +6,6 @@ import (
 	pgs "github.com/lyft/protoc-gen-star"
 )
 
-func format_name(name pgs.Name) string {
-	return name.UpperCamelCase().String()
-}
-
 type Constructor struct {
 	type_name pgs.Name
 	name      pgs.Name
@@ -94,4 +90,8 @@ func GleamTypeFromEnum(enum pgs.Enum) *GleamType {
 		type_name:    enum.Name(),
 		constructors: cons,
 	}
+}
+
+func format_name(name pgs.Name) string {
+	return name.UpperCamelCase().String()
 }
