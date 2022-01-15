@@ -3,6 +3,7 @@ syntax = "proto3";
 package protos;
 
 import "protos/child.proto";
+import "protos/wrappers.proto";
 
 message Test {
 
@@ -23,7 +24,6 @@ message Test {
     TestEnum e = 3;
     protos.child.Child b = 4;
 
-
     oneof oneof_a {
         int32 i = 5;
         float f = 6;
@@ -35,10 +35,9 @@ message Test {
         float fb = 9;
     }
 
-
     map<int32, int32> map = 10;
     map<int32, Test2> mapb = 11;
 
-
     float this_is_a_long_name = 12;
+    google.protobuf.BoolValue bv = 13;
 }

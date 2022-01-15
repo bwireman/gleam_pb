@@ -14,43 +14,83 @@ type Constructor struct {
 
 func (c *Constructor) Render() string {
 	if len(c.fields) > 0 {
-		return fmt.Sprintf("%s%s(%s)", format_name(c.type_name), format_name(c.name), c.fields.Render())
+		return fmt.Sprintf("%s(%s)", format_constructor_name(c.name), c.fields.Render(false))
 	}
-	return format_name(c.name)
+	return format_constructor_name(c.name)
+}
+
+func (c *Constructor) RenderAsGPBTuple() string {
+	return fmt.Sprintf("#(atom.Atom, %s)", c.fields.Render(true))
+}
+
+func (c *Constructor) RenderAsPatternMatch(overwriteName string, isExtract bool, guard string) string {
+	if len(c.fields) > 0 {
+		pattern := c.fields.RenderAsPatternMatch(false, isExtract)
+		result := c.fields.RenderAsPatternMatch(true, isExtract)
+
+		if len(overwriteName) == 0 {
+			overwriteName = "name"
+		}
+
+		gleam := fmt.Sprintf("%s(%s)", format_constructor_name(c.name), pattern)
+		gpb := fmt.Sprintf("#(%s, %s)", overwriteName, result)
+		if !isExtract {
+			gleam = fmt.Sprintf("%s(%s)", format_constructor_name(c.name), result)
+			gpb = fmt.Sprintf("#(%s, %s)", overwriteName, pattern)
+		}
+
+		mid := " -> "
+		if guard != "" {
+			mid = guard + mid
+		}
+
+		if isExtract {
+			return gleam + mid + gpb
+		} else {
+			return gpb + mid + gleam
+		}
+
+	}
+	return format_constructor_name(c.name)
 }
 
 type GleamType struct {
-	type_name    pgs.Name
-	constructors []*Constructor
+	TypeName     pgs.Name
+	Constructors []*Constructor
+	IsEnum       bool
 }
 
 func (g *GleamType) RenderAsMap() map[string]interface{} {
 	cons := []string{}
-	for _, con := range g.constructors {
+
+	for _, con := range g.Constructors {
 		cons = append(cons, con.Render())
 	}
 
 	return map[string]interface{}{
-		"type_name":    format_name(g.type_name),
+		"type_name":    format_constructor_name(g.TypeName),
 		"constructors": cons,
 	}
 }
 
 func GleamTypeFromMessage(msg pgs.Message) *GleamType {
 	fields := NewFieldList()
+
+	oneOfs := map[string]interface{}{}
+
 	for _, field := range msg.Fields() {
+		oo := field.OneOf()
 		if !field.InOneOf() {
 			fields = append(fields, FieldFromField(field))
+		} else if _, ok := oneOfs[oo.FullyQualifiedName()]; !ok && oo != nil {
+			oneOfs[oo.FullyQualifiedName()] = nil
+			fields = append(fields, FieldFromOneOf(msg, oo))
 		}
 	}
 
-	for _, oneof := range msg.OneOfs() {
-		fields = append(fields, FieldFromOneOf(msg, oneof))
-	}
-
 	return &GleamType{
-		type_name: msg.Name(),
-		constructors: []*Constructor{
+		TypeName: msg.Name(),
+		Constructors: []*Constructor{
 			{
 				name:   msg.Name(),
 				fields: fields,
@@ -71,8 +111,8 @@ func GleamTypeFromOnoeOf(containing_message pgs.Message, oneof pgs.OneOf) *Gleam
 	}
 
 	return &GleamType{
-		type_name:    containing_message.Name().UpperCamelCase() + oneof.Name().UpperCamelCase(),
-		constructors: cons,
+		TypeName:     containing_message.Name().UpperCamelCase() + oneof.Name().UpperCamelCase(),
+		Constructors: cons,
 	}
 }
 
@@ -87,11 +127,12 @@ func GleamTypeFromEnum(enum pgs.Enum) *GleamType {
 	}
 
 	return &GleamType{
-		type_name:    enum.Name(),
-		constructors: cons,
+		TypeName:     enum.Name(),
+		Constructors: cons,
+		IsEnum:       true,
 	}
 }
 
-func format_name(name pgs.Name) string {
+func format_constructor_name(name pgs.Name) string {
 	return name.UpperCamelCase().String()
 }

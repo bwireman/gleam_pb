@@ -1,4 +1,6 @@
 %{
-  "gleam_stdlib": {:hex, :gleam_stdlib, "0.16.0", "a4d856ef2aa0503e82cbc9e5e75f466b6d607a3332c6590e39b161b2245e23c5", [:rebar3], [], "hexpm", "288ec0c4b80af55caddf09a890b5800bf12227218c5d17014f8b73d213acfd00"},
-  "mix_gleam": {:hex, :mix_gleam, "0.1.0", "a0cee5d30de865124a32ca6cd53b64c3e2ac57f12adf6e47b88fb673f47c716e", [:mix], [], "hexpm", "9ff518e6aab444c7f2e74038f9383020ef89810cf1f4402911f33b202ffd72e7"},
+  "gleam_erlang": {:hex, :gleam_erlang, "0.7.0", "e5ec2bc71c72c91f9a9bc23e606ecc3b4f74d035593911f6b0d7ed9283ce41a9", [:gleam], [{:gleam_stdlib, "~> 0.18", [hex: :gleam_stdlib, repo: "hexpm", optional: false]}], "hexpm", "66df3e1f3bb366350b3a8c672389cdbcca33c0fcdba79907d38360de160824da"},
+  "gleam_stdlib": {:hex, :gleam_stdlib, "0.19.3", "b755757dbf24e8417478af61bfe56c9f9e904c4c670e3e4a25ac9bae85e86473", [:gleam], [], "hexpm", "ca579c2ff0621e93ff6efef61baffcf0505732ba073f616e28878042f1a1f401"},
+  "gleeunit": {:hex, :gleeunit, "0.6.0", "a43c1e456704c23b89fe0ae7441ef60903d91f26ecc1300e396635c71004dbc1", [:gleam], [{:gleam_stdlib, "~> 0.19", [hex: :gleam_stdlib, repo: "hexpm", optional: false]}], "hexpm", "77701a5e5a565727e1eeac9196fb878d544049b6331cd0305b5a69699135ea1c"},
+  "gpb": {:hex, :gpb, "4.19.2", "e841a1c5d5b82b6fbaddd2b6968c66ad48b34adc3b0d974e55cca653bd28ccc5", [:make, :rebar3], [], "hexpm", "3f4cb7f263e94675a598501a6dc96ec17f93ecb28c29bea3bea3a71c53a3317a"},
 }

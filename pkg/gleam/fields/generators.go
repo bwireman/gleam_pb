@@ -32,16 +32,16 @@ func (g *GeneratorFn) RenderAsMap() map[string]interface{} {
 }
 
 func GeneratorFnFromGleamType(t *GleamType) *GeneratorFn {
-	if len(t.constructors) != 1 {
+	if len(t.Constructors) != 1 {
 		return nil
 	}
 
 	g := &GeneratorFn{
-		type_name: t.type_name,
+		type_name: t.TypeName,
 		types:     []*GleamPrimitiveOrValue{},
 	}
 
-	for _, f := range t.constructors[0].fields {
+	for _, f := range t.Constructors[0].fields {
 		g.types = append(g.types, f.gleam_primitive)
 	}
 

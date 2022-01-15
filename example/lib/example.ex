@@ -13,6 +13,6 @@ defmodule Example do
 
   """
   def hello do
-    :world
+    :gleam_pb
   end
 end
