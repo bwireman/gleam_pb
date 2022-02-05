@@ -8,5 +8,5 @@ import (
 func main() {
 	pgs.Init(pgs.DebugEnv("DEBUG")).RegisterModule(
 		gleam.Gleam(),
-	).Render()
+	).RegisterPostProcessor(gleam.NewGleamFormatter()).Render()
 }

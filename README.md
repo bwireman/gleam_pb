@@ -10,8 +10,8 @@ Protobuf support for `Gleam` ✨
 
 - [X] `Gleam` Type generation
   - [X] custom functions that better handle default values
+  - [X] `gleam format` generated files
   - [ ] stop including unnecessary imports
-  - [ ] `gleam format` generated files
 - [X] message encoding
 - [X] message decoding
 - [ ] improve UX
