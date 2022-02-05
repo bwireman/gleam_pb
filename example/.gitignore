@@ -25,4 +25,10 @@ example-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
-/gen/
+*.ez
+build
+erl_crash.dump
+
+*.beam
+
+generate.sh

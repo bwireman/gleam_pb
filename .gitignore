@@ -1,3 +1,4 @@
 protoc-gen-gleam
 
 example/src
+example/protos/wrappers.proto
