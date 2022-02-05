@@ -1,0 +1,76 @@
+name: release
+on:
+  pull_request:
+    branches:
+      - main
+  # push:
+    # tags:
+      # - "v*"
+
+jobs:
+  build-release:
+    name: build-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build:
+          - macos
+          - macos-arm64
+          - windows-64bit
+        toolchain: [stable]
+        include:
+          - build: linux
+            os: ubuntu-latest
+            target: x86_64-linux
+          - build: macos
+            os: macos-latest
+            target: x86_64-apple-darwin
+          - build: macos-arm64
+            os: macos-11
+            target: aarch64-apple-darwin
+          - build: windows-64bit
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+
+      - name: Build
+        run: go build -o protoc-gen-gleam cmd/main.go
+
+      - name: Build archive
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            ARCHIVE="protoc-gen-gleam-$VERSION-${{ matrix.build }}.zip"
+            cp "target/release/protoc-gen-gleam.exe" "protoc-gen-gleam.exe"
+            7z a "$ARCHIVE" "protoc-gen-gleam.exe"
+            rm protoc-gen-gleam.exe
+          else
+            ARCHIVE="gleam-$VERSION-${{ matrix.build }}.tar.gz"
+            cp "target/release/protoc-gen-gleam" "protoc-gen-gleam"
+            tar -czvf "$ARCHIVE" "protoc-gen-gleam"
+            rm protoc-gen-gleam
+          fi
+
+          openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
+          openssl dgst -r -sha512 -out "$ARCHIVE".sha512 "$ARCHIVE"
+          echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
+
+      # - name: Upload release archive
+        # uses: softprops/action-gh-release@v1
+        # with:
+          # draft: true
+          # prerelease: false
+          # fail_on_unmatched_files: true
+          # files: |
+            # ${{ env.ASSET }}
+            # ${{ env.ASSET }}.sha256
+            # ${{ env.ASSET }}.sha512
