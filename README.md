@@ -1,6 +1,6 @@
 # `gleam_pb`
 
-WIP protobuf support for `Gleam` ✨. 
+Protobuf support for `Gleam` ✨
 
 ---
 
@@ -15,7 +15,7 @@ WIP protobuf support for `Gleam` ✨.
 - [X] message encoding
 - [X] message decoding
 - [ ] improve UX
-  - [ ] helper functions 
+  - [ ] helper functions
 - [ ] grpc
 
 ## API
@@ -30,21 +30,21 @@ WIP protobuf support for `Gleam` ✨.
 | int32, int64, uint32, uint64, sint32, sint64, fixed32, fixed64, sfixed32, sfixed64 | Int | integer() |
 | bool | Bool | true \| false |
 | enum | Zero Paramater Multi Constructor Type | atom() |
-| message | Option(Custom Type) | record |
+| message | `Option(<CustomType>)` | `record \| undefined` |
 | string | String | unicode string |
 | bytes | BitString | binary() |
-| oneof | Option(Custom Type) with multiple Constructors | {chosen_field, value} |
-| map | unordered list of tuples `[#(Key, Value)]` | `{field, value}` |
+| oneof | `Option(<CustomType>)` with multiple constructors | `{chosen_field, value}` |
+| map | unordered list of tuples `List(#(Key, Value))` | `[{key, value}]` |
 
 ### Functions
 
 `gleam_pb` generates functions to make using the types easier
 
-- function to generate the message with protobuf's default values named `new_<snake_case_message_name>() -> <MessageType>`
+- function to generate the message with protobuf's default values named `new_<custom_type>() -> <CustomType>`
 
 - functions to encode and decode the messages
-  - `encode_<snake_case_message_name>(m: <MessageType>) -> BitString`
-  - `encode_<snake_case_message_name>(b: BitString) -> <MessageType>`
+  - `encode_<custom_type>(m: <CustomType>) -> BitString`
+  - `encode_<custom_type>(b: BitString) -> <CustomType>`
 
 There are also several other functions intended for usage by `gleam_pb`
 
@@ -113,15 +113,40 @@ pub type Response {
   Response(val: Int, user: String)
 }
 
+pub fn new_example() {
+  Example(list.new(), option.None)
+}
 
-/// functions continue ...
+pub fn new_response() {
+  Response(0, "")
+}
+
+pub fn encode_example(m: Example) -> BitString {
+  let name = atom.create_from_string("protos.Example")
+
+  extract_example(name, m)
+  |> gleam_pb.encode(name)
+}
+
+pub fn encode_response(m: Response) -> BitString {
+  let name = atom.create_from_string("protos.Example.Response")
+
+  extract_response(name, m)
+  |> gleam_pb.encode(name)
+}
+
+pub fn decode_response(b: BitString) -> Response {
+  let name = atom.create_from_string("protos.Example.Response")
+  decode_msg_response(b, name)
+  |> reconstruct_response
+}
+
+/// internal functions continue ...
 ```
 
 ## Usage
 
-For `gleam_pb` and `gpb` must be used together to generate working `Gleam` code. This process is in mind to improve in the future. 
-
-
+For `gleam_pb` and `gpb` must be used together to generate working `Gleam` code. This process is in mind to improve in the future
 
 Example Script
 
@@ -134,4 +159,9 @@ protoc --plugin=protoc-gen-gleam -I . --gleam_out="src" protos/*.proto
 
 ### Issues
 
-You may need to manually update the `-include("gpb.hrl").` generated in `gleam_gpb.erl` to point to the correct header post `Gleam` compilation.
+You may need to manually update
+
+```erlang
+% generated in `gleam_gpb.erl`
+-include("gpb.hrl"). % -> update to point to the correct header post `Gleam` compilation
+```
