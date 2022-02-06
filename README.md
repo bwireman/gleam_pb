@@ -31,21 +31,21 @@ gleam_pb generally follows gpb's type generation, but makes it easier to use fro
 | int32, int64, uint32, uint64, sint32, sint64, fixed32, fixed64, sfixed32, sfixed64 | Int | integer() |
 | bool | Bool | true \| false |
 | enum | Zero Paramater Multi Constructor Type | atom() |
-| message | Option(<CustomType>) | record \| undefined |
+| message | Option(\<CustomType\>) | record \| undefined |
 | string | String | unicode string |
 | bytes | BitString | binary() |
-| oneof | Option(<CustomType>) with multiple constructors | {chosen_field, value} |
+| oneof | Option(\<CustomType\>) with multiple constructors | {chosen_field, value} |
 | map | unordered list of tuples List(#(Key, Value)) | [{key, value}] |
 
 ### Functions
 
 gleam_pb generates functions to make using the types easier
 
-- function to generate the message with protobuf's default values named new_<custom_type>() -> <CustomType>
+- function to generate the message with protobuf's default values named new_\<custom_type\>() -> \<CustomType\>
 
 - functions to encode and decode the messages
-  - encode_<custom_type>(m: <CustomType>) -> BitString
-  - encode_<custom_type>(b: BitString) -> <CustomType>
+  - encode_\<custom_type\>(m: \<CustomType\>) -> BitString
+  - encode_\<custom_type\>(b: BitString) -> \<CustomType\>
 
 There are also several other functions intended for usage by gleam_pb
 
@@ -129,6 +129,12 @@ pub fn encode_example(m: Example) -> BitString {
   |> gleam_pb.encode(name)
 }
 
+pub fn decode_example(b: BitString) -> Example {
+  let name = atom.create_from_string("protos.Example")
+  decode_msg_example(b, name)
+  |> reconstruct_example
+}
+
 pub fn encode_response(m: Response) -> BitString {
   let name = atom.create_from_string("protos.Example.Response")
 
@@ -142,7 +148,7 @@ pub fn decode_response(b: BitString) -> Response {
   |> reconstruct_response
 }
 
-/// internal functions continue ...
+//internal functions continue ...
 ```
 
 ## Usage
