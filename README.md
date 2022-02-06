@@ -159,7 +159,7 @@ Example Script
 
 ```bash
 # make sure protoc-gen-gleam is in you're path or add it manually using --plugin
-protoc --plugin=protoc-gen-gleam -I . --gleam_out="src" protos/*.proto
+protoc --plugin=protoc-gen-gleam -I . --gleam_out="output_path=./src:./src" protos/*.proto
 ```
 
 ### `gleam_pb` Flags

@@ -22,14 +22,12 @@ func (gf GleamFormatter) Match(a pgs.Artifact) bool {
 	}
 }
 
-func (gf GleamFormatter) Process(in []byte) (stdout []byte, err error) {
+func (gf GleamFormatter) Process(in []byte) ([]byte, error) {
 	cmd := exec.Command("gleam", "format", "--stdin")
 	cmd.Stdin = bytes.NewReader(in)
-
-	stdout, err = cmd.Output()
+	stdout, err := cmd.Output()
 	if err != nil {
-		fmt.Println(err.Error())
-		return
+		return nil, fmt.Errorf("Error formating generated gleam code: %s", string(stdout))
 	}
 
 	return stdout, nil

@@ -11,11 +11,6 @@ type gpbWrapper struct {
 	pathToBinary string
 }
 
-func exists(path string) bool {
-	_, err := os.Open(path)
-	return !errors.Is(err, os.ErrNotExist)
-}
-
 func newGPBWrapper(pathToBinary string) (*gpbWrapper, error) {
 	if !exists(pathToBinary) {
 		return nil, fmt.Errorf("protoc-erl could not be found at %s", pathToBinary)
@@ -38,4 +33,9 @@ func (g *gpbWrapper) generate(targets []string, outputPath string) (err error) {
 	}
 
 	return nil
+}
+
+func exists(path string) bool {
+	_, err := os.Open(path)
+	return !errors.Is(err, os.ErrNotExist)
 }

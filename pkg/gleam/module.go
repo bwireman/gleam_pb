@@ -10,15 +10,21 @@ import (
 
 type GleamModule struct {
 	*pgs.ModuleBase
-	tpl *template.Template
+	tpl           *template.Template
+	protocErlPath string
+	output        string
 }
 
 func Gleam() *GleamModule { return &GleamModule{ModuleBase: &pgs.ModuleBase{}} }
 
 func (g *GleamModule) InitContext(c pgs.BuildContext) {
 	g.ModuleBase.InitContext(c)
-
+	g.protocErlPath = g.Parameters().StrDefault("protoc_erl_path", "./deps/gpb/bin/protoc-erl")
 	g.tpl = template.Must(template.New("gleam-package-template").Parse(fields.GleamTemplate))
+
+	if g.output = g.Parameters().Str("output_path"); g.output == "" {
+		g.Fail("please specify the `output_path` flag")
+	}
 }
 
 func (g *GleamModule) Name() string { return "gleam" }
@@ -31,7 +37,7 @@ func (g *GleamModule) Execute(targets map[string]pgs.File, pkgs map[string]pgs.P
 		}
 	}
 
-	wrapper, err := newGPBWrapper(g.Parameters().StrDefault("protoc_erl_path", "./deps/gpb/bin/protoc-erl"))
+	wrapper, err := newGPBWrapper(g.protocErlPath)
 	if err != nil {
 		g.Fail(err.Error())
 	}
