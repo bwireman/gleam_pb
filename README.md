@@ -1,20 +1,21 @@
-# `gleam_pb`
+# gleam_pb
 
-Protobuf support for `Gleam` ✨
+Protobuf support for Gleam ✨
 
 ---
 
-`gleam_pb` wraps the excellent [gpb](https://github.com/tomas-abrahamsson/gpb) erlang library and generates idiomatic `Gleam` types 🤘 
+gleam_pb wraps the excellent [gpb](https://github.com/tomas-abrahamsson/gpb) erlang library and generates idiomatic Gleam types 🤘
 
 ## Progress
 
-- [X] `Gleam` Type generation
+- [X] Gleam Type generation
   - [X] custom functions that better handle default values
-  - [X] `gleam format` generated files
+  - [X] gleam format generated files
   - [ ] stop including unnecessary imports
 - [X] message encoding
 - [X] message decoding
 - [ ] improve UX
+  - [X] call protoc-erl internally
   - [ ] helper functions
 - [ ] grpc
 
@@ -22,31 +23,31 @@ Protobuf support for `Gleam` ✨
 
 ### Generated types
 
-`gleam_pb` generally follows `gpb`'s type generation, but makes it easier to use from `Gleam`.
+gleam_pb generally follows gpb's type generation, but makes it easier to use from Gleam.
 
-| `protobuf` | `gleam_pb` | `gpb` |
+| protobuf | gleam_pb | gpb |
 |---|---|---|
 | double,float | Float | float() |
 | int32, int64, uint32, uint64, sint32, sint64, fixed32, fixed64, sfixed32, sfixed64 | Int | integer() |
 | bool | Bool | true \| false |
 | enum | Zero Paramater Multi Constructor Type | atom() |
-| message | `Option(<CustomType>)` | `record \| undefined` |
+| message | Option(<CustomType>) | record \| undefined |
 | string | String | unicode string |
 | bytes | BitString | binary() |
-| oneof | `Option(<CustomType>)` with multiple constructors | `{chosen_field, value}` |
-| map | unordered list of tuples `List(#(Key, Value))` | `[{key, value}]` |
+| oneof | Option(<CustomType>) with multiple constructors | {chosen_field, value} |
+| map | unordered list of tuples List(#(Key, Value)) | [{key, value}] |
 
 ### Functions
 
-`gleam_pb` generates functions to make using the types easier
+gleam_pb generates functions to make using the types easier
 
-- function to generate the message with protobuf's default values named `new_<custom_type>() -> <CustomType>`
+- function to generate the message with protobuf's default values named new_<custom_type>() -> <CustomType>
 
 - functions to encode and decode the messages
-  - `encode_<custom_type>(m: <CustomType>) -> BitString`
-  - `encode_<custom_type>(b: BitString) -> <CustomType>`
+  - encode_<custom_type>(m: <CustomType>) -> BitString
+  - encode_<custom_type>(b: BitString) -> <CustomType>
 
-There are also several other functions intended for usage by `gleam_pb`
+There are also several other functions intended for usage by gleam_pb
 
 ### Example
 
@@ -146,15 +147,22 @@ pub fn decode_response(b: BitString) -> Response {
 
 ## Usage
 
-For `gleam_pb` and `gpb` must be used together to generate working `Gleam` code. This process is in mind to improve in the future
+gleam_pb and gpb must be used together to generate working Gleam code.
 
 Example Script
 
 ```bash
-# install protoc-erl from `gpb`
-protoc-erl -pkgs -modname gleam_gpb -I protos/*.proto -o ./src
-# make sure protoc-gen-gleam is in you're path or add it manually using `--plugin`
+# make sure protoc-gen-gleam is in you're path or add it manually using --plugin
 protoc --plugin=protoc-gen-gleam -I . --gleam_out="src" protos/*.proto
+```
+
+### `gleam_pb` Flags
+
+- 'output_path': (Required) specifies the desired output path
+- 'protoc_erl_path': path to gpb's protoc-erl
+
+```bash
+protoc -I . --gleam_out="output_path=./src,protoc_erl_path=bin/protoc-erl:./src" protos/*.proto
 ```
 
 ### Issues
@@ -163,5 +171,5 @@ You may need to manually update
 
 ```erlang
 % generated in `gleam_gpb.erl`
--include("gpb.hrl"). % -> update to point to the correct header post `Gleam` compilation
+-include("gpb.hrl"). % -> update to point to the correct header post Gleam compilation
 ```

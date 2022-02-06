@@ -23,8 +23,21 @@ func (g *GleamModule) InitContext(c pgs.BuildContext) {
 
 func (g *GleamModule) Name() string { return "gleam" }
 
-func (g *GleamModule) Execute(_targets map[string]pgs.File, pkgs map[string]pgs.Package) []pgs.Artifact {
-	g.AddCustomFile(g.OutputPath()+"/src/gleam_pb.gleam", fields.GleamPB, 0644)
+func (g *GleamModule) Execute(targets map[string]pgs.File, pkgs map[string]pgs.Package) []pgs.Artifact {
+	protosFilePaths := []string{}
+	for t, f := range targets {
+		if f.Package().ProtoName() != "google.protobuf" {
+			protosFilePaths = append(protosFilePaths, t)
+		}
+	}
+
+	wrapper, err := newGPBWrapper(g.Parameters().StrDefault("protoc_erl_path", "./deps/gpb/bin/protoc-erl"))
+	if err != nil {
+		g.Fail(err.Error())
+	}
+
+	wrapper.generate(protosFilePaths, g.OutputPath())
+	g.AddCustomFile(g.OutputPath()+"/gleam_pb.gleam", fields.GleamPB, 0644)
 
 	for _, p := range pkgs {
 		allMessages := []pgs.Message{}
