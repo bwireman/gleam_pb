@@ -10,22 +10,34 @@ import (
 
 type GleamModule struct {
 	*pgs.ModuleBase
-	tpl           *template.Template
-	protocErlPath string
-	output        string
+	tpl     *template.Template
+	wrapper *gpbWrapper
+
+	gpbHeaderInclude string
+	output           string
 }
 
 func Gleam() *GleamModule { return &GleamModule{ModuleBase: &pgs.ModuleBase{}} }
 
 func (g *GleamModule) InitContext(c pgs.BuildContext) {
 	g.ModuleBase.InitContext(c)
-	g.protocErlPath = g.Parameters().StrDefault("protoc_erl_path", "./deps/gpb/bin/protoc-erl")
 	g.tpl = template.Must(template.New("gleam-package-template").Parse(fields.GleamTemplate))
 
 	if g.output = g.Parameters().Str("output_path"); g.output == "" {
 		g.Fail("please specify the `output_path` flag")
 	}
+
+	protocErlPath := g.Parameters().StrDefault("protoc_erl_path", "./deps/gpb/bin/protoc-erl")
+	if wrapper, err := newGPBWrapper(protocErlPath, g.OutputPath()); err != nil {
+		g.Fail(err.Error())
+	} else {
+		g.wrapper = wrapper
+	}
+
+	g.gpbHeaderInclude = g.Parameters().Str("gpb_header_include")
 }
+
+func (g *GleamModule) OutputPath() string { return g.output }
 
 func (g *GleamModule) Name() string { return "gleam" }
 
@@ -37,12 +49,14 @@ func (g *GleamModule) Execute(targets map[string]pgs.File, pkgs map[string]pgs.P
 		}
 	}
 
-	wrapper, err := newGPBWrapper(g.protocErlPath)
-	if err != nil {
+	if err := g.wrapper.generate(protosFilePaths); err != nil {
 		g.Fail(err.Error())
+	} else if g.gpbHeaderInclude != "" {
+		if err = g.wrapper.updateImport(g.gpbHeaderInclude); err != nil {
+			g.Fail(err.Error())
+		}
 	}
 
-	wrapper.generate(protosFilePaths, g.OutputPath())
 	g.AddCustomFile(g.OutputPath()+"/gleam_pb.gleam", fields.GleamPB, 0644)
 
 	for _, p := range pkgs {
