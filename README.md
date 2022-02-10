@@ -16,6 +16,7 @@ gleam_pb wraps the excellent [gpb](https://github.com/tomas-abrahamsson/gpb) erl
 - [X] message decoding
 - [ ] improve UX
   - [X] call protoc-erl internally
+  - [X] flag to better handle gpb header includes
   - [ ] helper functions
 - [ ] grpc
 
@@ -166,7 +167,7 @@ protoc --plugin=protoc-gen-gleam -I . --gleam_out="output_path=./src:./src" prot
 
 - 'output_path': (Required) specifies the desired output path
 - 'protoc_erl_path': path to gpb's protoc-erl
-- 'gpb_header_include': path to prepend to the header include for gpb. See [Issues](#Issues) for more info
+- 'gpb_header_include': path to prepend to the header include for gpb. See [Knwon Issues](#known-issues) for more info
   - if you need a variable include here, remember that [erlang header resolution](https://www.erlang.org/doc/reference_manual/macros.html) is quite clever and can use environment variables
 
 ```bash
