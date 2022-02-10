@@ -166,14 +166,18 @@ protoc --plugin=protoc-gen-gleam -I . --gleam_out="output_path=./src:./src" prot
 
 - 'output_path': (Required) specifies the desired output path
 - 'protoc_erl_path': path to gpb's protoc-erl
+- 'gpb_header_include': path to prepend to the header include for gpb. See [Issues](#Issues) for more info
+  - if you need a variable include here, remember that [erlang header resolution](https://www.erlang.org/doc/reference_manual/macros.html) is quite clever and can use environment variables
 
 ```bash
-protoc -I . --gleam_out="output_path=./src,protoc_erl_path=bin/protoc-erl:./src" protos/*.proto
+protoc -I . \
+  --gleam_out="gpb_header_include=$ENV/include/,output_path=./src,protoc_erl_path=bin/protoc-erl:./src" \
+  protos/*.proto
 ```
 
-### Issues
+### Known Issues
 
-You may need to manually update
+#### Includes aren't working?!
 
 ```erlang
 % generated in `gleam_gpb.erl`
