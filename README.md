@@ -83,7 +83,7 @@ message Example {
 
 Becomes
 
-```rust
+```gleam
 import gleam/option
 import gleam/list
 import gleam/pair
