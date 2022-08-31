@@ -36,7 +36,13 @@ func GenEncDecFromMessage(msg pgs.Message, gleam_type *GleamType) *GenEnc {
 
 	for _, f := range c.fields {
 		if f.is_message && f.gt != nil {
+                   if f.repeated {
+
+	reconstruct_type = append(reconstruct_type, fmt.Sprintf("List(%s)", f.gt.Constructors[0].RenderAsGPBTuple()))
+                      } else {
+
 			reconstruct_type = append(reconstruct_type, fmt.Sprintf("gleam_pb.Undefined(%s)", f.gt.Constructors[0].RenderAsGPBTuple()))
+                      }
 		} else if f.is_oneof && f.gt != nil {
 			reconstruct_type = append(reconstruct_type, fmt.Sprintf("gleam_pb.Undefined(#(atom.Atom, x_%s))", f.name.LowerSnakeCase()))
 		} else if f.map_elem_is_message && f.gt != nil {
@@ -49,7 +55,7 @@ func GenEncDecFromMessage(msg pgs.Message, gleam_type *GleamType) *GenEnc {
 	}
 
 	return &GenEnc{
-		type_name:            msg.Name().String(),
+		type_name:            msg.Name().UpperCamelCase().String(),
 		func_name:            format_func_name(msg.Name()),
 		message_name:         format_fqn(msg.FullyQualifiedName()),
 		constructors:         gleam_type.Constructors,
@@ -91,7 +97,7 @@ func GenEncDecFromOneOf(msg pgs.Message, oo pgs.OneOf, gleam_type *GleamType) *G
 		if len(c.fields) != 1 {
 			panic("GenEncDecFromOneOf len(constructor.field) != 1")
 		}
-		val_name := oo.Fields()[i].Name().String()
+		val_name := oo.Fields()[i].Name().LowerSnakeCase().String()
 		atom_val := fmt.Sprintf("atom.create_from_string(\"%s\")", val_name)
 		atom_val_name := "atom_" + val_name
 

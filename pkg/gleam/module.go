@@ -70,9 +70,11 @@ func (g *GleamModule) Execute(targets map[string]pgs.File, pkgs map[string]pgs.P
 
 			for _, imp := range file.Imports() {
 				if imp.Package().ProtoName() != p.ProtoName() {
-					new_import := strings.ReplaceAll(imp.Package().ProtoName().String(), ".", "/")
-
+					new_import := strings.ReplaceAll(
+                                          imp.Package().ProtoName().LowerSnakeCase().String(), ".", "/")
+if (new_import != "") {
 					imports = append(imports, new_import)
+                                      }
 				}
 
 			}
@@ -106,7 +108,8 @@ func (g *GleamModule) generate(all_messages []pgs.Message, all_enums []pgs.Enum,
 
 		msg_gleam_type := fields.GleamTypeFromMessage(msg)
 
-		if generator := fields.GeneratorFnFromGleamType(msg_gleam_type); generator != nil {
+
+                if generator := fields.GeneratorFnFromGleamType(msg_gleam_type); generator != nil {
 			generators = append(generators, generator.RenderAsMap())
 		}
 
@@ -115,7 +118,7 @@ func (g *GleamModule) generate(all_messages []pgs.Message, all_enums []pgs.Enum,
 		enc_dec = append(enc_dec, fields.GenEncDecFromMessage(msg, msg_gleam_type).RenderAsMap())
 	}
 
-	g.AddGeneratorTemplateFile(strings.Replace(pkg.ProtoName().String(), ".", "/", -1)+".gleam", g.tpl, map[string]interface{}{
+	g.AddGeneratorTemplateFile(strings.Replace(pkg.ProtoName().LowerSnakeCase().String(), ".", "/", -1)+".gleam", g.tpl, map[string]interface{}{
 		"imports":    imports,
 		"package":    pkg.ProtoName().LowerSnakeCase().String(),
 		"messages":   gleam_types_map,

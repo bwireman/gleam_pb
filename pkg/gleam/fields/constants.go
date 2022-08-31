@@ -70,9 +70,15 @@ pub type {{ .type_name }} {
 }
 {{ end }}
 
+// generators
+
 {{ range .generators }}
 pub fn {{ .func_name }}() {
+{{ if .has_fields }}
 	{{ .type_name }}({{ .fields }})
+{{else}}
+	{{ .type_name }}
+{{end}}
 }
 {{ end }}
 
@@ -128,7 +134,7 @@ fn reconstruct_{{ .func_name }}(u: gleam_pb.Undefined(#(atom.Atom, x))) -> optio
 }
 
 {{ else }}
-pub fn extract_{{ .func_name }}(name: atom.Atom, m: {{ .type_name }}) -> dynamic.Dynamic {
+pub fn extract_{{ .func_name }}(reserved__struct_name: atom.Atom, m: {{ .type_name }}) -> dynamic.Dynamic {
 	case m {
 		{{ range .extract_patterns -}}
 			{{ . }} |> dynamic.from

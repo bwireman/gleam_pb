@@ -14,6 +14,7 @@ type Field struct {
 	atom_name        string
 	extract_name     string
 	reconstruct_name string
+        pkg_name         string
 	repeated         bool
 	optional         bool
 	is_enum          bool
@@ -30,6 +31,7 @@ type Field struct {
 }
 
 type conv struct {
+        pkg_name            string
 	type_name           string
 	gleam_primitive     *GleamPrimitiveOrValue
 	atom_name           string
@@ -49,6 +51,7 @@ func FieldFromField(f pgs.Field) *Field {
 
 	return &Field{
 		name:                 f.Name(),
+                pkg_name:             c.pkg_name, 
 		gleam_primitive:      c.gleam_primitive,
 		type_name:            c.type_name,
 		atom_name:            c.atom_name,
@@ -73,6 +76,7 @@ func FieldFromOneOf(msg pgs.Message, o pgs.OneOf) *Field {
 
 	return &Field{
 		name:                 o.Name(),
+                pkg_name:             "", 
 		gleam_primitive:      Option.AsPrimitiveOrValue(),
 		type_name:            type_name.String(),
 		atom_name:            format_fqn(o.FullyQualifiedName()),
@@ -111,6 +115,29 @@ func (f *Field) Render(asPattern bool) string {
 	return typeName
 }
 
+func (f *Field) RenderAsGPB(asPattern bool) string {
+	typeName := f.type_name
+
+        if f.is_oneof {
+		typeName = "gleam_pb.Undefined(#(atom.Atom, x))" 
+        } else if f.is_message && f.gt != nil {
+		typeName = f.gt.Constructors[0].RenderAsGPBTuple()
+        } else if f.is_enum {
+		typeName = "atom.Atom" 
+        } else if f.repeated {
+		typeName = fmt.Sprintf("List(%s)", typeName)
+	} else if f.optional && !asPattern {
+		typeName = fmt.Sprintf("option.Option(%s)", typeName)
+	}
+
+	if !asPattern {
+		return fmt.Sprintf("%s: %s", f.name.LowerSnakeCase(), typeName)
+	}
+
+	return typeName
+}
+
+
 func (f *Field) RenderAsPatternMatch(rightSide bool, isExtract bool) string {
 	v := f.name.LowerSnakeCase().String()
 
@@ -145,7 +172,7 @@ func (f *Field) RenderAsPatternMatch(rightSide bool, isExtract bool) string {
 				}
 			}
 		} else if f.is_enum {
-			v = fmt.Sprintf("%s%s(%s)", func_name, f.func_name(), v)
+			v = fmt.Sprintf("%s(%s)", func_name, v)
 		} else if f.map_elem_is_message {
 			lambda := func_name
 			if isExtract {
@@ -186,7 +213,8 @@ func _convert(f pgs.Field) (pName string, atom_name string, extract_name string,
 
 	if type_package != field_package {
 		split := strings.Split(type_package.ProtoName().String(), ".")
-		pkg := split[len(split)-1]
+		pkg := pgs.Name(split[len(split)-1]).LowerSnakeCase().String()
+
 		extract_name = pkg + ".extract_" + embed.Name().LowerSnakeCase().String()
 		reconstruct_name = pkg + ".reconstruct_" + embed.Name().LowerSnakeCase().String()
 
@@ -204,8 +232,19 @@ func convert(f pgs.Field) *conv {
 
 	gleam_primitive_or_value := Unknown.AsPrimitiveOrValue()
 	p_type := f.Type().ProtoType()
+	 
+        if f.Imports() != nil {
+          new_import := strings.ReplaceAll(
+                                                  f.Imports()[0].Package().ProtoName().LowerSnakeCase().String(), ".", "/")
+          cv.pkg_name = new_import
+
+
+        }
+ 
 	switch p_type {
 	case pgs.EnumT:
+
+
 		var enum pgs.Enum
 
 		if cv.repeated {
@@ -215,7 +254,27 @@ func convert(f pgs.Field) *conv {
 		}
 		cv.atom_name = format_fqn(enum.FullyQualifiedName())
 		gleam_primitive_or_value.Value = format_enum_name(enum).String()
-		cv.type_name = enum.Name().UpperCamelCase().String()
+
+
+                cv.type_name = enum.Name().UpperCamelCase().String()
+                cv.extract_name = "extract_" + pgs.Name(cv.type_name).LowerSnakeCase().String()
+		cv.reconstruct_name = "reconstruct_" + pgs.Name(cv.type_name).LowerSnakeCase().String()
+ 
+                if f.Imports() != nil {
+		
+                  pkg := strings.ReplaceAll(
+                                                  f.Imports()[0].Package().ProtoName().LowerSnakeCase().String(), ".", "/")
+
+                  gleam_primitive_or_value.Value = pkg + "." + gleam_primitive_or_value.Value
+                  cv.extract_name = pkg + ".extract_" + pgs.Name(cv.type_name).LowerSnakeCase().String()
+		  cv.reconstruct_name = pkg + ".reconstruct_" + pgs.Name(cv.type_name).LowerSnakeCase().String()
+                  cv.type_name = pkg + "." + cv.type_name
+ 
+
+
+                }
+
+		
 
 	case pgs.GroupT, pgs.MessageT:
 
@@ -237,8 +296,16 @@ func convert(f pgs.Field) *conv {
 			gleam_primitive_or_value.Primitive = Option
 		}
 	default:
+
 		gleam_primitive_or_value.Primitive = ProtoTypeToPrimitives[p_type]
 		cv.type_name = gleam_primitive_or_value.Primitive.Render()
+                if f.Imports() != nil {
+                  new_import := strings.ReplaceAll(
+                                                  f.Imports()[0].Package().ProtoName().LowerSnakeCase().String(), ".", "/")
+
+                  cv.type_name = new_import  + "."  + cv.type_name
+                }
+
 	}
 
 	if cv.repeated {
@@ -248,6 +315,15 @@ func convert(f pgs.Field) *conv {
 	}
 
 	cv.gleam_primitive = gleam_primitive_or_value
+
+
+        
+        //if f.Imports() != nil {
+	//  new_import := strings.ReplaceAll(
+        //                                  f.Imports()[0].Package().ProtoName().LowerSnakeCase().String(), ".", "/")
+
+        //  cv.type_name = new_import  + "."  + cv.type_name
+        //}
 
 	return cv
 }

@@ -20,16 +20,16 @@ func (c *Constructor) Render() string {
 }
 
 func (c *Constructor) RenderAsGPBTuple() string {
-	return fmt.Sprintf("#(atom.Atom, %s)", c.fields.Render(true))
+	return fmt.Sprintf("#(atom.Atom, %s)", c.fields.RenderAsGPBTuple(true))
 }
 
 func (c *Constructor) RenderAsPatternMatch(overwriteName string, isExtract bool, guard string) string {
-	if len(c.fields) > 0 {
+	//if len(c.fields) > 0 {
 		pattern := c.fields.RenderAsPatternMatch(false, isExtract)
 		result := c.fields.RenderAsPatternMatch(true, isExtract)
 
 		if len(overwriteName) == 0 {
-			overwriteName = "name"
+			overwriteName = "reserved__struct_name"
 		}
 
 		gleam := fmt.Sprintf("%s(%s)", format_constructor_name(c.name), pattern)
@@ -38,6 +38,11 @@ func (c *Constructor) RenderAsPatternMatch(overwriteName string, isExtract bool,
 			gleam = fmt.Sprintf("%s(%s)", format_constructor_name(c.name), result)
 			gpb = fmt.Sprintf("#(%s, %s)", overwriteName, pattern)
 		}
+
+                if len(c.fields) == 0 {
+                   gleam = fmt.Sprintf("%s", format_constructor_name(c.name))
+                }
+
 
 		mid := " -> "
 		if guard != "" {
@@ -50,8 +55,8 @@ func (c *Constructor) RenderAsPatternMatch(overwriteName string, isExtract bool,
 			return gpb + mid + gleam
 		}
 
-	}
-	return format_constructor_name(c.name)
+	//}
+	//return "BROKEN_DEFAULT" + format_constructor_name(c.name)
 }
 
 type GleamType struct {
