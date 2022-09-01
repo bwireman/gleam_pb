@@ -123,6 +123,53 @@ func GenEncDecFromOneOf(msg pgs.Message, oo pgs.OneOf, gleam_type *GleamType) *G
 	}
 }
 
+func GenPrinterFromMessage(enum pgs.Message, gleam_type *GleamType) map[string]interface{} {
+	constructors := []map[string]interface{}{}
+
+	field_package := enum.File().Package()
+
+        split := strings.Split(field_package.ProtoName().String(), ".")
+        pkg := pgs.Name(split[len(split)-1]).LowerSnakeCase().String()
+
+
+	for _, c := range gleam_type.Constructors {
+          con := map[string]interface{}{
+		"name":    c.Render(),
+                "printer_name":    "pname",
+	  }
+		constructors = append(constructors, con)
+
+        }
+	return map[string]interface{}{
+		"type_name":            enum.Name().LowerSnakeCase().String(),
+		"params":         constructors,
+                "pkg":            pkg, 
+	}
+}
+func GenPrinterFromEnum(enum pgs.Enum, gleam_type *GleamType) map[string]interface{} {
+	constructors := []map[string]interface{}{}
+
+
+	field_package := enum.File().Package()
+
+        split := strings.Split(field_package.ProtoName().String(), ".")
+        pkg := pgs.Name(split[len(split)-1]).LowerSnakeCase().String()
+
+
+	for _, c := range gleam_type.Constructors {
+          con := map[string]interface{}{
+		"name":    c.Render(),
+                "pkg":    pkg,
+	  }
+		constructors = append(constructors, con)
+
+        }
+	return map[string]interface{}{
+		"type_name":            enum.Name().LowerSnakeCase().String(),
+		"constructors":         constructors,
+	}
+}
+
 func GenEncDecFromEnum(enum pgs.Enum, gleam_type *GleamType) *GenEnc {
 	extract_patterns := []string{}
 	reconstruct_patterns := []string{}

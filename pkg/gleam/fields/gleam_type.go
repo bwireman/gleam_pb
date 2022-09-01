@@ -121,6 +121,7 @@ func GleamTypeFromOnoeOf(containing_message pgs.Message, oneof pgs.OneOf) *Gleam
 	}
 }
 
+
 func GleamTypeFromEnum(enum pgs.Enum) *GleamType {
 	cons := []*Constructor{}
 

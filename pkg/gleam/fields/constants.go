@@ -70,6 +70,24 @@ pub type {{ .type_name }} {
 }
 {{ end }}
 
+// printers
+
+{{ range .enums }}
+fn show_{{ .type_name }}(a) -> String {
+  case a {
+{{ range .constructors }}    {{.name}} -> "{{.pkg}}.{{.name}}" 
+{{ end }}
+  }
+}
+{{ end }}
+
+
+{{ range .printers }}
+fn show_{{ .type_name }}(a) -> String {
+{{ range .params}}  {{.printer_name}}(a.{{.name}}),  {{ end }}
+}
+{{ end }}
+
 // generators
 
 {{ range .generators }}
