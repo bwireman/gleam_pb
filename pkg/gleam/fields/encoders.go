@@ -129,11 +129,12 @@ func GenEncDecFromEnum(enum pgs.Enum, gleam_type *GleamType) *GenEnc {
 	reconstruct_vars := []string{}
 
 	for i, c := range gleam_type.Constructors {
-		gpb_enum_name := enum.Values()[i].Name().LowerSnakeCase()
+		gpb_enum_name := enum.Values()[i].Name()
+                varname := enum.Values()[i].Name().LowerSnakeCase()
 
 		extract_patterns = append(extract_patterns, fmt.Sprintf("%s -> atom.create_from_string(\"%s\")", c.Render(), gpb_enum_name))
-		reconstruct_patterns = append(reconstruct_patterns, fmt.Sprintf("x if x == %s -> %s", gpb_enum_name, c.Render()))
-		reconstruct_vars = append(reconstruct_vars, fmt.Sprintf("let %s = atom.create_from_string(\"%s\")", gpb_enum_name, gpb_enum_name))
+		reconstruct_patterns = append(reconstruct_patterns, fmt.Sprintf("x if x == %s -> %s", varname, c.Render()))
+		reconstruct_vars = append(reconstruct_vars, fmt.Sprintf("let %s = atom.create_from_string(\"%s\")", varname, gpb_enum_name))
 	}
 
 	return &GenEnc{
