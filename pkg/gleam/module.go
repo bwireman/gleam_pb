@@ -90,6 +90,13 @@ func (g *GleamModule) generate(all_messages []pgs.Message, all_enums []pgs.Enum,
 	enc_dec := []map[string]interface{}{}
 	generators := []map[string]interface{}{}
 	enums := []map[string]interface{}{}
+	printers := []map[string]interface{}{}
+//{{ range .printers }}
+//fn show_{{ .type_name }}(a) -> String {
+//{{ range .params}}  {{.printer_name}}(a.{{.name}}),  {{ end }}
+//}
+//{{ end }}
+
 
 	for _, enum := range all_enums {
 		// don't need enum generators
@@ -119,9 +126,9 @@ func (g *GleamModule) generate(all_messages []pgs.Message, all_enums []pgs.Enum,
 		msg_gleam_type_map := msg_gleam_type.RenderAsMap()
 		gleam_types_map = append(gleam_types_map, msg_gleam_type_map)
 		enc_dec = append(enc_dec, fields.GenEncDecFromMessage(msg, msg_gleam_type).RenderAsMap())
+                printers = append(printers, fields.GenPrinterFromMessage(msg, msg_gleam_type))
 	}
 
-        printers := []string{}
 
 	g.AddGeneratorTemplateFile(strings.Replace(pkg.ProtoName().LowerSnakeCase().String(), ".", "/", -1)+".gleam", g.tpl, map[string]interface{}{
 		"imports":    imports,
