@@ -11,6 +11,7 @@ type Field struct {
 	name             pgs.Name
 	gleam_primitive  *GleamPrimitiveOrValue
 	type_name        string
+        type_name_no_pkg string
 	atom_name        string
 	extract_name     string
 	reconstruct_name string
@@ -33,6 +34,7 @@ type Field struct {
 type conv struct {
         pkg_name            string
 	type_name           string
+        type_name_no_pkg    string
 	gleam_primitive     *GleamPrimitiveOrValue
 	atom_name           string
 	extract_name        string
@@ -54,6 +56,7 @@ func FieldFromField(f pgs.Field) *Field {
                 pkg_name:             c.pkg_name, 
 		gleam_primitive:      c.gleam_primitive,
 		type_name:            c.type_name,
+                type_name_no_pkg:      c.type_name_no_pkg, 
 		atom_name:            c.atom_name,
 		extract_name:         c.extract_name,
 		reconstruct_name:     c.reconstruct_name,
@@ -76,6 +79,7 @@ func FieldFromOneOf(msg pgs.Message, o pgs.OneOf) *Field {
 
 	return &Field{
 		name:                 o.Name(),
+                type_name_no_pkg:     o.Name().String(),
                 pkg_name:             "", 
 		gleam_primitive:      Option.AsPrimitiveOrValue(),
 		type_name:            type_name.String(),
@@ -192,7 +196,7 @@ func (f *Field) RenderAsPatternMatch(rightSide bool, isExtract bool) string {
 	return v
 }
 
-func _convert(f pgs.Field) (pName string, atom_name string, extract_name string, reconstruct_name string, gt *GleamType) {
+func _convert(f pgs.Field) (pName string, pName1 string, atom_name string, extract_name string, reconstruct_name string, gt *GleamType) {
 	var embed pgs.Message
 	if f.Type().IsMap() || f.Type().IsRepeated() {
 		embed = f.Type().Element().Embed()
@@ -202,15 +206,16 @@ func _convert(f pgs.Field) (pName string, atom_name string, extract_name string,
 
 	gt = GleamTypeFromMessage(embed)
 
-	embed_func_name := format_func_name(embed.Name())
+        fix_fname := pgs.Name(strings.Replace(embed.Name().String(), "_", "", -1))
+	embed_func_name := format_func_name(fix_fname)
 	extract_name = "extract_" + embed_func_name
 	reconstruct_name = "reconstruct_" + embed_func_name
 	atom_name = format_fqn(embed.FullyQualifiedName())
 
 	type_package := embed.Package()
 	field_package := f.File().Package()
-	pName = embed.Name().UpperCamelCase().String()
-
+	pName = strings.Replace(embed.Name().UpperCamelCase().String(), "_", "", -1) 
+        pName1 = pName 
 	if type_package != field_package {
 		split := strings.Split(type_package.ProtoName().String(), ".")
 		pkg := pgs.Name(split[len(split)-1]).LowerSnakeCase().String()
@@ -221,7 +226,7 @@ func _convert(f pgs.Field) (pName string, atom_name string, extract_name string,
 		pName = pkg + "." + pName
 	}
 
-	return pName, atom_name, extract_name, reconstruct_name, gt
+	return pName, pName1, atom_name, extract_name, reconstruct_name, gt
 }
 
 func convert(f pgs.Field) *conv {
@@ -255,7 +260,7 @@ func convert(f pgs.Field) *conv {
 		cv.atom_name = format_fqn(enum.FullyQualifiedName())
 		gleam_primitive_or_value.Value = format_enum_name(enum).String()
 
-
+                cv.type_name_no_pkg = enum.Name().UpperCamelCase().String()
                 cv.type_name = enum.Name().UpperCamelCase().String()
                 cv.extract_name = "extract_" + pgs.Name(cv.type_name).LowerSnakeCase().String()
 		cv.reconstruct_name = "reconstruct_" + pgs.Name(cv.type_name).LowerSnakeCase().String()
@@ -281,7 +286,7 @@ func convert(f pgs.Field) *conv {
 		if f.Type().IsMap() {
 			if f.Type().Element().IsEmbed() {
 				cv.map_elem_is_message = true
-				cv.map_elem, cv.atom_name, cv.extract_name, cv.reconstruct_name, cv.gt = _convert(f)
+				cv.map_elem, cv.type_name_no_pkg, cv.atom_name, cv.extract_name, cv.reconstruct_name, cv.gt = _convert(f)
 			} else {
 				cv.map_elem = ProtoTypeToPrimitives[f.Type().Element().ProtoType()].Render()
 			}
@@ -292,7 +297,7 @@ func convert(f pgs.Field) *conv {
 		} else {
 			cv.optional = true
 			cv.is_message = true
-			cv.type_name, cv.atom_name, cv.extract_name, cv.reconstruct_name, cv.gt = _convert(f)
+			cv.type_name, cv.type_name_no_pkg, cv.atom_name, cv.extract_name, cv.reconstruct_name, cv.gt = _convert(f)
 			gleam_primitive_or_value.Primitive = Option
 		}
 	default:

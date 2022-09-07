@@ -54,9 +54,10 @@ func GenEncDecFromMessage(msg pgs.Message, gleam_type *GleamType) *GenEnc {
 		}
 	}
 
+        fixedname := strings.Replace(msg.Name().UpperCamelCase().String(), "_", "", -1)
 	return &GenEnc{
-		type_name:            msg.Name().UpperCamelCase().String(),
-		func_name:            format_func_name(msg.Name()),
+		type_name:            fixedname,
+		func_name:            format_func_name(pgs.Name(fixedname)),
 		message_name:         format_fqn(msg.FullyQualifiedName()),
 		constructors:         gleam_type.Constructors,
 		extract_patterns:     extract_patterns,
@@ -73,19 +74,33 @@ func genOneOfFieldRecFunc(val_name string, type_name pgs.Name, c *Constructor, o
 	con_name := format_constructor_name(c.name)
 
 	if optional {
+          pname := "reconstruct_" + pgs.Name(c.fields[0].type_name).LowerSnakeCase().String()
+
 		field_rec_type := fmt.Sprintf("#(atom.Atom, gleam_pb.Undefined(%s))", c.fields.Render(true))
 
 		return fmt.Sprintf(`let rec_%s = fn(v: %s) -> %s { 
 			case v {
 				#(_, gleam_pb.Undefined) -> %s(option.None)
-				#(_, %s) -> %s(option.Some(%s |> gleam_pb.force_a_to_b))
-			}}`, val_name, field_rec_type, type_name, con_name, val_name, con_name, val_name)
+				#(_, %s) -> %s(option.Some(%s(gleam_pb.force_a_to_b(%s))))
+			}}`,val_name, 
+                        field_rec_type, 
+                        type_name, 
+                        con_name, 
+                        val_name, 
+                        con_name, 
+                        pname,
+                        val_name )
 	}
 
 	return fmt.Sprintf(`let rec_%s = fn(v: %s) -> %s { 
 		case v {
 			#(_, %s) -> %s(%s)
 		}}`, val_name, c.RenderAsGPBTuple(), type_name, val_name, con_name, val_name)
+}
+
+func decap(input string) string {
+	res := strings.ToLower(input[:1]) + input[1:]
+        return res
 }
 
 func GenEncDecFromOneOf(msg pgs.Message, oo pgs.OneOf, gleam_type *GleamType) *GenEnc {
@@ -97,8 +112,9 @@ func GenEncDecFromOneOf(msg pgs.Message, oo pgs.OneOf, gleam_type *GleamType) *G
 		if len(c.fields) != 1 {
 			panic("GenEncDecFromOneOf len(constructor.field) != 1")
 		}
+                val_name_cre := decap(oo.Fields()[i].Name().UpperCamelCase().String())
+		atom_val := fmt.Sprintf("atom.create_from_string(\"%s\")", val_name_cre)
 		val_name := oo.Fields()[i].Name().LowerSnakeCase().String()
-		atom_val := fmt.Sprintf("atom.create_from_string(\"%s\")", val_name)
 		atom_val_name := "atom_" + val_name
 
 		extract_patterns = append(extract_patterns, c.RenderAsPatternMatch(atom_val, true, ""))
@@ -123,11 +139,21 @@ func GenEncDecFromOneOf(msg pgs.Message, oo pgs.OneOf, gleam_type *GleamType) *G
 	}
 }
 
+
 //{{ range .printers }}
 //fn show_{{ .type_name }}(a : {{ .type_name }}) -> String {
 //{{ range .params}}  {{.printer_name}}(a.{{.name}}),  {{ end }}
 //}
 //{{ end }}
+func is_native(type_name string) bool {
+switch type_name {
+    case "Int", "Bool", "String", "BitString", "Float":
+        return true 
+    default:
+        return false 
+    }
+}
+
 func GenPrinterFromMessage(enum pgs.Message, gleam_type *GleamType) map[string]interface{} {
 	constructors := []map[string]interface{}{}
 
@@ -143,8 +169,9 @@ func GenPrinterFromMessage(enum pgs.Message, gleam_type *GleamType) map[string]i
 
 	for _, f := range gleam_type.Constructors[0].fields {
           printer := ""
-          if f.is_message || f.is_enum {
-            printer = pgs.Name(strings.ReplaceAll(f.type_name, "_", "")).LowerSnakeCase().String()
+          
+          if f.is_message || f.is_enum || (f.gt != nil && f.gt.IsEnum) {
+            printer = pgs.Name(strings.ReplaceAll(f.type_name_no_pkg, "_", "")).LowerSnakeCase().String()
             printer = "show_" + printer 
             if f.pkg_name != "" {
             printer = f.pkg_name + "." + printer   
@@ -162,8 +189,24 @@ func GenPrinterFromMessage(enum pgs.Message, gleam_type *GleamType) map[string]i
              }
            } else if f.is_oneof {
              printer = `"unimplemented_one_of"` 
-           } else {
+           } else if f.map_elem_is_message {
+	     //map_elem_is_message bool
+	     //map_key             string
+	     //map_elem            string
+             printer = `"unimplemented_map"` 
+           }  else if f.list_elem_is_message {
+              printer = `"unimplemented_list_of_msg<`+f.type_name+`>"` 
+           } else if !is_native(f.type_name)  {
+             printer = `"non native type `+f.type_name+`"`
+           } else if f.repeated {
+            printer = `
+            string_builder.to_string(string_builder.from_strings(
+            list.map(a.`+f.name.LowerSnakeCase().String()+`, 
+            primitive_show_`+pgs.Name(f.type_name).LowerSnakeCase().String()+`)))`
+
+          } else {
             printer = "primitive_show_"+pgs.Name(f.type_name).LowerSnakeCase().String()+"(a."+f.name.LowerSnakeCase().String()+")"
+          
           }
           con := map[string]interface{}{
                 "printer":   printer ,

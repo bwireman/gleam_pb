@@ -72,10 +72,14 @@ pub type {{ .type_name }} {
 }
 {{ end }}
 
+
 // printers
+external fn io_lib_format(a : String, b) -> String =
+    "io_lib" "format"
 
 fn primitive_show_int(a) -> String {
-  "int"
+  //io_lib_format("~B", [a])
+  string.inspect(a)
 }
 
 fn primitive_show_string(a) -> String {
@@ -83,15 +87,15 @@ fn primitive_show_string(a) -> String {
 }
 
 fn primitive_show_bool(a) -> String {
-  "bool"
+  string.inspect( a) 
 }
 
 fn primitive_show_float(a : Float) -> String {
-  "float"
+  string.inspect(a) 
 }
 
 fn primitive_show_bit_string(a) -> String {
-  "bit_string"
+  string.inspect(a)
 }            
 
 {{ range .printers }}
@@ -107,7 +111,7 @@ pub fn show_{{ .lowercase_type_name }}(a : {{.type_name}}) -> List(String) {
 
 
 {{ range .enums }}
-fn show_{{ .type_name }}(a) -> String {
+pub fn show_{{ .type_name }}(a) -> String {
   case a {
 {{ range .constructors }}    {{.name}} -> "{{.pkg}}.{{.name}}" 
 {{ end }}
@@ -163,7 +167,8 @@ pub fn extract_{{ .func_name }}(m: {{ .type_name }}) -> dynamic.Dynamic {
 	}
 }
 
-fn reconstruct_{{ .func_name }}(u: gleam_pb.Undefined(#(atom.Atom, x))) -> option.Option({{ .type_name }}) {
+
+pub fn reconstruct_{{ .func_name }}(u: gleam_pb.Undefined(#(atom.Atom, x))) -> option.Option({{ .type_name }}) {
 	{{ range .reconstruct_vars -}}
 		{{ . }}
 	{{ end }}
@@ -171,11 +176,21 @@ fn reconstruct_{{ .func_name }}(u: gleam_pb.Undefined(#(atom.Atom, x))) -> optio
 	
 	case u {
 		gleam_pb.Undefined -> option.None
-		gleam_pb.Wrapper(m)	-> case m {
+		gleam_pb.Wrapper(m)	-> 
+                 {
+                   case m {
 			{{ range .reconstruct_patterns -}}
 			{{ . }}
 			{{ end }}
 		} |> option.Some
+               }
+                m -> {
+                case gleam_pb.force_a_to_b(m) {
+	   {{ range .reconstruct_patterns -}}
+	      {{ . }}
+	   {{ end }}
+         } |> option.Some
+       }
 	}
 }
 

@@ -1,6 +1,7 @@
 package fields
 
 import (
+        "strings"
 	"fmt"
 
 	pgs "github.com/lyft/protoc-gen-star"
@@ -92,12 +93,13 @@ func GleamTypeFromMessage(msg pgs.Message) *GleamType {
 			fields = append(fields, FieldFromOneOf(msg, oo))
 		}
 	}
-
+        
+        fixedname := pgs.Name(strings.Replace(msg.Name().String(), "_", "", -1))
 	return &GleamType{
-		TypeName: msg.Name(),
+		TypeName: fixedname,
 		Constructors: []*Constructor{
 			{
-				name:   msg.Name(),
+				name:   fixedname,
 				fields: fields,
 			},
 		},
