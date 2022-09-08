@@ -48,6 +48,11 @@ type conv struct {
 	gt                  *GleamType
 }
 
+func (f *Field) reconstruct_func_name() string {
+  pname := f.reconstruct_name 
+  return pname
+}
+
 func FieldFromField(f pgs.Field) *Field {
 	c := convert(f)
 

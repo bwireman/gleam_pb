@@ -1,6 +1,7 @@
 package fields
 
 import pgs "github.com/lyft/protoc-gen-star"
+import "strings"
 
 func format_fqn(n string) string {
 	return n[1:]
@@ -15,5 +16,12 @@ func format_oneof_type_name(msg pgs.Message, o pgs.OneOf) pgs.Name {
 }
 
 func format_enum_name(enum pgs.Enum) pgs.Name {
-	return (enum.Name() + enum.Values()[0].Name()).UpperCamelCase()
+                name := enum.Name()
+                first := enum.Values()[0].Name()
+                if ! strings.HasPrefix(first.String(),name.String()) {
+                  return (name + first).UpperCamelCase()
+                }
+ 
+	return first.UpperCamelCase()
+
 }

@@ -101,10 +101,11 @@ fn primitive_show_bit_string(a) -> String {
 {{ range .printers }}
 pub fn show_{{ .lowercase_type_name }}(a : {{.type_name}}) -> List(String) {
 [
-"{{.foreign_type_name}}(",
-{{ range .params}}  {{.printer}}, 
-{{ end }}
-")"
+{{if .has_params}}
+"{{.foreign_type_name}}(", {{.params}}, ")"
+{{else}}
+"{{.foreign_type_name}}"
+{{end}}
 ]
 }
 {{ end }}

@@ -128,8 +128,13 @@ func GleamTypeFromEnum(enum pgs.Enum) *GleamType {
 	cons := []*Constructor{}
 
 	for _, enum_val := range enum.Values() {
+                name := enum_val.Name()
+                if ! strings.HasPrefix(name.String(),enum.Name().String()) {
+                  name = enum.Name() + name
+                }
+                  
 		cons = append(cons, &Constructor{
-			name:   enum.Name() + enum_val.Name(),
+			name:   name,
 			fields: nil,
 		})
 	}

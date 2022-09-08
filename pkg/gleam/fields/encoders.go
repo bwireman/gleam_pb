@@ -74,7 +74,7 @@ func genOneOfFieldRecFunc(val_name string, type_name pgs.Name, c *Constructor, o
 	con_name := format_constructor_name(c.name)
 
 	if optional {
-          pname := "reconstruct_" + pgs.Name(c.fields[0].type_name).LowerSnakeCase().String()
+          pname := c.fields[0].reconstruct_name
 
 		field_rec_type := fmt.Sprintf("#(atom.Atom, gleam_pb.Undefined(%s))", c.fields.Render(true))
 
@@ -92,6 +92,16 @@ func genOneOfFieldRecFunc(val_name string, type_name pgs.Name, c *Constructor, o
                         val_name )
 	}
 
+        if c.fields[0].is_enum {
+          pname := c.fields[0].reconstruct_name
+
+
+	return fmt.Sprintf(`let rec_%s = fn(v: %s) -> %s { 
+		case v {
+			#(_, %s) -> %s(%s(%s))
+		}}`, val_name, c.RenderAsGPBTuple(), type_name, val_name, con_name, pname, val_name)
+
+        }
 	return fmt.Sprintf(`let rec_%s = fn(v: %s) -> %s { 
 		case v {
 			#(_, %s) -> %s(%s)
@@ -155,7 +165,7 @@ switch type_name {
 }
 
 func GenPrinterFromMessage(enum pgs.Message, gleam_type *GleamType) map[string]interface{} {
-	constructors := []map[string]interface{}{}
+	constructors := []string{}
 
 	field_package := enum.File().Package()
 
@@ -178,7 +188,7 @@ func GenPrinterFromMessage(enum pgs.Message, gleam_type *GleamType) map[string]i
              }
              field_name := f.name.LowerSnakeCase().String()
              if f.repeated {
-              printer = `string_builder.to_string(string_builder.from_strings(list.flatten(list.map(a.`+field_name+`, `+printer+`))))`
+              printer = `"[", string_builder.to_string(string_builder.from_strings(list.flatten(list.map(a.`+field_name+`, `+printer+`)))), "]"`
              } else if f.is_message {
             printer = `case a.`+field_name+` {
               option.None -> "option.None"
@@ -199,28 +209,28 @@ func GenPrinterFromMessage(enum pgs.Message, gleam_type *GleamType) map[string]i
            } else if !is_native(f.type_name)  {
              printer = `"non native type `+f.type_name+`"`
            } else if f.repeated {
-            printer = `
+            printer = `"[", 
             string_builder.to_string(string_builder.from_strings(
             list.map(a.`+f.name.LowerSnakeCase().String()+`, 
-            primitive_show_`+pgs.Name(f.type_name).LowerSnakeCase().String()+`)))`
+            primitive_show_`+pgs.Name(f.type_name).LowerSnakeCase().String()+`))), "]"`
 
           } else {
             printer = "primitive_show_"+pgs.Name(f.type_name).LowerSnakeCase().String()+"(a."+f.name.LowerSnakeCase().String()+")"
           
           }
-          con := map[string]interface{}{
-                "printer":   printer ,
-	  }
-	  constructors = append(constructors, con)
+          
+	  constructors = append(constructors, printer)
         }
 
         foreign_type_name := pkg + "." + gleam_type.Constructors[0].name.String()
 
+        has_params := len(gleam_type.Constructors[0].fields) > 0
 	return map[string]interface{}{
 		"lowercase_type_name":  enum.Name().UpperCamelCase().LowerSnakeCase().String(),
        		"type_name":            enum.Name().UpperCamelCase().String(),
                 "foreign_type_name":    foreign_type_name, 
-		"params":               constructors,
+		"params":               strings.Join(constructors, `,",",`),
+                "has_params":           has_params,
 	}
 }
 func GenPrinterFromEnum(enum pgs.Enum, gleam_type *GleamType) map[string]interface{} {
