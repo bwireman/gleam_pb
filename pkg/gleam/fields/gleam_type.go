@@ -1,6 +1,7 @@
 package fields
 
 import (
+        "strings"
 	"fmt"
 
 	pgs "github.com/lyft/protoc-gen-star"
@@ -20,16 +21,16 @@ func (c *Constructor) Render() string {
 }
 
 func (c *Constructor) RenderAsGPBTuple() string {
-	return fmt.Sprintf("#(atom.Atom, %s)", c.fields.Render(true))
+	return fmt.Sprintf("#(atom.Atom, %s)", c.fields.RenderAsGPBTuple(true))
 }
 
 func (c *Constructor) RenderAsPatternMatch(overwriteName string, isExtract bool, guard string) string {
-	if len(c.fields) > 0 {
+	//if len(c.fields) > 0 {
 		pattern := c.fields.RenderAsPatternMatch(false, isExtract)
 		result := c.fields.RenderAsPatternMatch(true, isExtract)
 
 		if len(overwriteName) == 0 {
-			overwriteName = "name"
+			overwriteName = "reserved__struct_name"
 		}
 
 		gleam := fmt.Sprintf("%s(%s)", format_constructor_name(c.name), pattern)
@@ -38,6 +39,11 @@ func (c *Constructor) RenderAsPatternMatch(overwriteName string, isExtract bool,
 			gleam = fmt.Sprintf("%s(%s)", format_constructor_name(c.name), result)
 			gpb = fmt.Sprintf("#(%s, %s)", overwriteName, pattern)
 		}
+
+                if len(c.fields) == 0 {
+                   gleam = fmt.Sprintf("%s", format_constructor_name(c.name))
+                }
+
 
 		mid := " -> "
 		if guard != "" {
@@ -50,8 +56,8 @@ func (c *Constructor) RenderAsPatternMatch(overwriteName string, isExtract bool,
 			return gpb + mid + gleam
 		}
 
-	}
-	return format_constructor_name(c.name)
+	//}
+	//return "BROKEN_DEFAULT" + format_constructor_name(c.name)
 }
 
 type GleamType struct {
@@ -87,12 +93,13 @@ func GleamTypeFromMessage(msg pgs.Message) *GleamType {
 			fields = append(fields, FieldFromOneOf(msg, oo))
 		}
 	}
-
+        
+        fixedname := pgs.Name(strings.Replace(msg.Name().String(), "_", "", -1))
 	return &GleamType{
-		TypeName: msg.Name(),
+		TypeName: fixedname,
 		Constructors: []*Constructor{
 			{
-				name:   msg.Name(),
+				name:   fixedname,
 				fields: fields,
 			},
 		},
@@ -116,12 +123,18 @@ func GleamTypeFromOnoeOf(containing_message pgs.Message, oneof pgs.OneOf) *Gleam
 	}
 }
 
+
 func GleamTypeFromEnum(enum pgs.Enum) *GleamType {
 	cons := []*Constructor{}
 
 	for _, enum_val := range enum.Values() {
+                name := enum_val.Name()
+                if ! strings.HasPrefix(name.String(),enum.Name().String()) {
+                  name = enum.Name() + name
+                }
+                  
 		cons = append(cons, &Constructor{
-			name:   enum.Name() + enum_val.Name(),
+			name:   name,
 			fields: nil,
 		})
 	}

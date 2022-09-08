@@ -15,7 +15,6 @@ func (g *GeneratorFn) RenderAsMap() map[string]interface{} {
 
 	fields := []string{}
 	for _, t := range g.types {
-
 		if t.Primitive != Unknown {
 			fields = append(fields, GleamPrimitiveDefaultValues[t.Primitive])
 		} else {
@@ -28,6 +27,7 @@ func (g *GeneratorFn) RenderAsMap() map[string]interface{} {
 		"type_name": g.type_name.UpperCamelCase().String(),
 		"func_name": "new_" + g.type_name.LowerSnakeCase().String(),
 		"fields":    strings.Join(fields, ", "),
+		"has_fields":    len(fields) > 0,
 	}
 }
 
